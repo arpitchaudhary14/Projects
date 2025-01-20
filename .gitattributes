@@ -1,2 +1,5 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+Student Data Manager is a Python-based program designed to efficiently manage and organize student information. The system allows users to easily add, update, and delete student records, including personal details, course information, and academic performance. By utilizing file handling techniques, this program ensures secure data storage while providing a simple interface for smooth interaction. This project not only enhanced my Python skills but also introduced me to concepts like data manipulation, record management, and file I/O operations, laying a strong foundation for future projects.
+
+This project is based on basic principles of Python. I plan to enhance and update this program after learning advanced Python in the next semester, making it more efficient and feature-rich.
+
+For more info and code: https://colab.research.google.com/drive/1lDfBsH0L_EHLK046eJQnsxVj63jVPYXm?usp=sharing
