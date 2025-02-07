@@ -1,0 +1,259 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+typedef struct {
+    char name[50];
+    int accountNumber;
+    float balance;
+} Account;
+
+typedef struct {
+    time_t timestamp;
+    char type[20];
+    float amount;
+    float balance;
+} Transaction;
+
+// Function to load accounts from file
+Account* loadAccounts(int *accountCount) {
+    FILE *fp = fopen("accounts.dat", "rb");
+    if (fp == NULL) {
+        *accountCount = 0;
+        return NULL;
+    }
+
+    Account *accounts = NULL;
+    Account tempAccount;
+    int count = 0;
+
+    while (fread(&tempAccount, sizeof(Account), 1, fp) == 1) {
+        accounts = realloc(accounts, (count + 1) * sizeof(Account));
+        if (accounts == NULL) {
+            fclose(fp);
+            perror("Reallocation failed.");
+            exit(EXIT_FAILURE);
+        }
+        accounts[count] = tempAccount;
+        count++;
+    }
+
+    fclose(fp);
+    *accountCount = count;
+    return accounts;
+}
+
+// Function to save accounts to file
+void saveAccounts(Account *accounts, int accountCount) {
+    FILE *fp = fopen("accounts.dat", "wb");
+    if (fp == NULL) {
+        perror("Error opening file for saving");
+        return;
+    }
+
+    fwrite(accounts, sizeof(Account), accountCount, fp);
+    fclose(fp);
+}
+
+// Function to generate a unique account number
+int generateAccountNumber(Account *accounts, int accountCount) {
+    int maxAccountNumber = 0;
+    for (int i = 0; i < accountCount; i++) {
+        if (accounts[i].accountNumber > maxAccountNumber) {
+            maxAccountNumber = accounts[i].accountNumber;
+        }
+    }
+    return maxAccountNumber + 1;
+}
+
+// Function to save transactions
+void saveTransactions(int accountNumber, Transaction *transactions, int transactionCount) {
+    char filename[50];
+    sprintf(filename, "transactions_%d.dat", accountNumber);
+    FILE *fp = fopen(filename, "wb");
+    if (fp == NULL) {
+        perror("Error opening file for saving transactions");
+        return;
+    }
+
+    fwrite(transactions, sizeof(Transaction), transactionCount, fp);
+    fclose(fp);
+}
+
+// Function to load transactions
+Transaction* loadTransactions(int accountNumber, int *transactionCount) {
+    char filename[50];
+    sprintf(filename, "transactions_%d.dat", accountNumber);
+    FILE *fp = fopen(filename, "rb");
+    if (fp == NULL) {
+        *transactionCount = 0;
+        return NULL;
+    }
+
+    Transaction *transactions = NULL;
+    Transaction tempTransaction;
+    int count = 0;
+
+    while (fread(&tempTransaction, sizeof(Transaction), 1, fp) == 1) {
+        transactions = realloc(transactions, (count + 1) * sizeof(Transaction));
+        if (transactions == NULL) {
+            fclose(fp);
+            perror("Reallocation failed.");
+            exit(EXIT_FAILURE);
+        }
+        transactions[count] = tempTransaction;
+        count++;
+    }
+
+    fclose(fp);
+    *transactionCount = count;
+    return transactions;
+}
+
+// Function to create a new account
+void createAccount(Account **accounts, int *accountCount) {
+    Account newAccount;
+    printf("Enter Account Holder Name: ");
+    scanf(" %[^\n]", newAccount.name);
+    newAccount.accountNumber = generateAccountNumber(*accounts, *accountCount);
+    newAccount.balance = 0.0;
+
+    *accounts = realloc(*accounts, (*accountCount + 1) * sizeof(Account));
+    if (*accounts == NULL) {
+        perror("Reallocation failed.");
+        return;
+    }
+    (*accounts)[*accountCount] = newAccount;
+    (*accountCount)++;
+    printf("Account Created Successfully! Account Number: %d\n", newAccount.accountNumber);
+}
+
+// Function to deposit money
+void depositMoney(Account *accounts, int accountCount) {
+    int accountNumber;
+    float amount;
+    int transactionCount;
+    Transaction *transactions;
+
+    printf("Enter Account Number: ");
+    scanf("%d", &accountNumber);
+    printf("Enter Amount to Deposit: ");
+    scanf("%f", &amount);
+
+    for (int i = 0; i < accountCount; i++) {
+        if (accounts[i].accountNumber == accountNumber) {
+            transactions = loadTransactions(accountNumber, &transactionCount);
+            transactions = realloc(transactions, (transactionCount + 1) * sizeof(Transaction));
+            if (transactions == NULL) {
+                perror("Reallocation failed.");
+                return;
+            }
+
+            time(&transactions[transactionCount].timestamp);
+            strcpy(transactions[transactionCount].type, "deposit");
+            transactions[transactionCount].amount = amount;
+            accounts[i].balance += amount;
+            transactions[transactionCount].balance = accounts[i].balance;
+            transactionCount++;
+
+            saveTransactions(accountNumber, transactions, transactionCount);
+            free(transactions);
+
+            printf("Deposit Successful. New Balance: %.2f\n", accounts[i].balance);
+            return;
+        }
+    }
+    printf("Account not found.\n");
+}
+
+// Function to withdraw money
+void withdrawMoney(Account *accounts, int accountCount) {
+    int accountNumber;
+    float amount;
+    int transactionCount;
+    Transaction *transactions;
+    printf("Enter Account Number: ");
+    scanf("%d", &accountNumber);
+    printf("Enter Amount to Withdraw: ");
+    scanf("%f", &amount);
+
+    for (int i = 0; i < accountCount; i++) {
+        if (accounts[i].accountNumber == accountNumber) {
+            if (accounts[i].balance >= amount) {
+                transactions = loadTransactions(accountNumber, &transactionCount);
+                transactions = realloc(transactions, (transactionCount + 1) * sizeof(Transaction));
+                if (transactions == NULL) {
+                    perror("Reallocation failed.");
+                    return;
+                }
+
+                time(&transactions[transactionCount].timestamp);
+                strcpy(transactions[transactionCount].type, "withdraw");
+                transactions[transactionCount].amount = amount;
+                accounts[i].balance -= amount;
+                transactions[transactionCount].balance = accounts[i].balance;
+                transactionCount++;
+
+                saveTransactions(accountNumber, transactions, transactionCount);
+                free(transactions);
+
+                printf("Withdrawal Successful. New Balance: %.2f\n", accounts[i].balance);
+            } else {
+                printf("Insufficient Balance.\n");
+            }
+            return;
+        }
+    }
+    printf("Account not found.\n");
+}
+
+// Menu Function
+void displayMenu() {
+    printf("\n----- Mini Banking System -----\n");
+    printf("1. Create New Account\n");
+    printf("2. Deposit Money\n");
+    printf("3. Withdraw Money\n");
+    printf("10. Exit\n");
+    printf("Enter your choice: ");
+}
+
+// Main Function
+int main() {
+    Account *accounts = NULL;
+    int accountCount = 0;
+    int choice;
+
+    accounts = loadAccounts(&accountCount);
+
+    do {
+        displayMenu();
+        if (scanf("%d", &choice) != 1) {
+            printf("Invalid input. Please enter a number.\n");
+            while (getchar() != '\n');  // Clear input buffer
+            continue;
+        }
+
+        switch (choice) {
+            case 1:
+                createAccount(&accounts, &accountCount);
+                break;
+            case 2:
+                depositMoney(accounts, accountCount);
+                break;
+            case 3:
+                withdrawMoney(accounts, accountCount);
+                break;
+            case 10:
+                printf("Exiting...\n");
+                printf("Thank You For Visiting🙂....\n");
+                break;
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    } while (choice != 10);
+
+    saveAccounts(accounts, accountCount);
+    free(accounts);
+    return 0;
+}
