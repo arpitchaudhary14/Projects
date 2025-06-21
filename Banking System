@@ -1,0 +1,167 @@
+from abc import ABC, abstractmethod
+class Account(ABC):
+ def __init__(self, account_number, customer_id, balance=0.0):
+  self._account_number = account_number
+  self._customer_id = customer_id
+  self._balance = balance
+ def get_account_number(self):
+  return self._account_number
+ def get_customer_id(self):
+  return self._customer_id
+ def get_balance(self):
+  return self._balance
+ @abstractmethod
+ def deposit(self, amount):
+  pass
+ @abstractmethod
+ def withdraw(self, amount):
+  pass
+ def display(self):
+  return f"Acc No: {self._account_number}, Balance: ₹{self._balance:.2f}"
+class SavingsAccount(Account):
+ def __init__(self, account_number, customer_id, balance=0.0, interest_rate=0.01):
+  super().__init__(account_number, customer_id, balance)
+  self._interest_rate = interest_rate
+ def deposit(self, amount):
+  if amount > 0:
+   self._balance += amount
+   return True
+  return False
+ def withdraw(self, amount):
+  if 0 < amount <= self._balance:
+   self._balance -= amount
+   return True
+  return False
+ def apply_interest(self):
+  self._balance += self._balance * self._interest_rate
+ def display(self):
+  base = super().display()
+  return f"{base}, Interest: {self._interest_rate*100:.1f}%"
+class CheckingAccount(Account):
+ def __init__(self, account_number, customer_id, balance=0.0, overdraft_limit=1000):
+  super().__init__(account_number, customer_id, balance)
+  self._overdraft_limit = overdraft_limit
+ def deposit(self, amount):
+  if amount > 0:
+   self._balance += amount
+   return True
+  return False
+ def withdraw(self, amount):
+  if self._balance - amount >= -self._overdraft_limit:
+   self._balance -= amount
+   return True
+  return False
+ def display(self):
+  base = super().display()
+  return f"{base}, Overdraft Limit: ₹{self._overdraft_limit:.2f}"
+class Customer:
+ def __init__(self, customer_id, name, address):
+  self.customer_id = customer_id
+  self.name = name
+  self.address = address
+  self.accounts = []
+class Bank:
+ def __init__(self):
+  self.customers = {}
+  self.accounts = {}
+ def add_customer(self, customer):
+  if customer.customer_id in self.customers:
+   return False
+  self.customers[customer.customer_id] = customer
+  return True
+ def create_account(self, customer_id, acc_type):
+  if customer_id not in self.customers:
+   return None
+  acc_no = input("Enter new account number (e.g. ACC101): ")
+  if acc_no in self.accounts:
+   print("Account number already exists!")
+   return None
+  if acc_type == "s":
+   rate = float(input("Enter interest rate (0.01 for 1%): "))
+   acc = SavingsAccount(acc_no, customer_id, 0.0, rate)
+  else:
+   limit = float(input("Enter overdraft limit: "))
+   acc = CheckingAccount(acc_no, customer_id, 0.0, limit)
+  self.accounts[acc_no] = acc
+  self.customers[customer_id].accounts.append(acc_no)
+  return acc
+ def deposit(self, acc_no, amt):
+  acc = self.accounts.get(acc_no)
+  if acc and acc.deposit(amt):
+   return True
+  return False
+ def withdraw(self, acc_no, amt):
+  acc = self.accounts.get(acc_no)
+  if acc and acc.withdraw(amt):
+   return True
+  return False
+ def transfer(self, from_acc, to_acc, amt):
+  a1 = self.accounts.get(from_acc)
+  a2 = self.accounts.get(to_acc)
+  if a1 and a2 and a1.withdraw(amt):
+   if a2.deposit(amt):
+    return True
+   else:
+    a1.deposit(amt)
+  return False
+ def show_customers(self):
+  for c in self.customers.values():
+   print(f"ID: {c.customer_id}, Name: {c.name}, Address: {c.address}, Accounts: {len(c.accounts)}")
+ def show_accounts(self):
+  for acc in self.accounts.values():
+   print(acc.display())
+ def apply_interest(self):
+  for acc in self.accounts.values():
+   if isinstance(acc, SavingsAccount):
+    old = acc.get_balance()
+    acc.apply_interest()
+    new = acc.get_balance()
+    interest = new - old
+    print(f"Interest of ₹{interest:.2f} applied to {acc.get_account_number()}")
+bank = Bank()
+while True:
+ print("1. Add Customer")
+ print("2. Create Account")
+ print("3. Deposit")
+ print("4. Withdraw")
+ print("5. Transfer Funds")
+ print("6. Show All Customers")
+ print("7. Show All Accounts")
+ print("8. Apply Interest to All")
+ print("9. Exit")
+ ch = input("Enter choice: ")
+ if ch == "1":
+  cid = input("Customer ID: ")
+  name = input("Name: ")
+  addr = input("Address: ")
+  cust = Customer(cid, name, addr)
+  print("Customer added." if bank.add_customer(cust) else "Customer ID already exists.")
+ elif ch == "2":
+  cid = input("Customer ID: ")
+  typ = input("Account type (s = Savings, c = Checking): ").lower()
+  acc = bank.create_account(cid, typ)
+  print("Account Created." if acc else "Failed.")
+ elif ch == "3":
+  acc = input("Account No: ")
+  amt = float(input("Amount: "))
+  print("Deposit successful." if bank.deposit(acc, amt) else "Failed.")
+ elif ch == "4":
+  acc = input("Account No: ")
+  amt = float(input("Amount: "))
+  print("Withdrawn." if bank.withdraw(acc, amt) else "Failed.")
+ elif ch == "5":
+  f = input("From Account: ")
+  t = input("To Account: ")
+  amt = float(input("Amount: "))
+  print("Transfer complete." if bank.transfer(f, t, amt) else "Failed.")
+ elif ch == "6":
+  bank.show_customers()
+ elif ch == "7":
+  bank.show_accounts()
+ elif ch == "8":
+  bank.apply_interest()
+ elif ch == "9":
+  print("Thanks for Visiting!")
+  break
+ else:
+  print("Invalid option.")
