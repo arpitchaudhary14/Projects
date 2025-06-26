@@ -1,0 +1,75 @@
+import requests
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+# Set plot style
+plt.rcParams["figure.dpi"] = 130
+sns.set(style="whitegrid")
+
+# API credentials
+API_KEY = "d3ebc8aab40e4ba19a4161232252006"
+BASE_URL = "http://api.weatherapi.com/v1/current.json"
+
+# User input for single city
+city = input("Enter city name: ")
+
+# Build API URL with AQI enabled
+url = f"{BASE_URL}?key={API_KEY}&q={city}&aqi=yes"
+response = requests.get(url)
+
+if response.status_code == 200:
+    data = response.json()
+
+    # Extract data
+    location_name = data['location']['name']
+    country = data['location']['country']
+    temp_c = data['current']['temp_c']
+    humidity = data['current']['humidity']
+    pressure = data['current']['pressure_mb']
+    visibility = data['current']['vis_km']
+    wind_kph = data['current']['wind_kph']
+    uv = data['current']['uv']
+    cloud = data['current']['cloud']
+    pm2_5 = data['current']['air_quality']['pm2_5']
+    pm10 = data['current']['air_quality']['pm10']
+
+    # Create dataframe for Excel & Report
+    df = pd.DataFrame({
+        'Parameter': ["Temperature (°C)", "Humidity (%)", "Pressure (mb)", "Visibility (km)",
+                      "Wind Speed (km/h)", "UV Index", "Cloud (%)", "PM2.5 AQI", "PM10 AQI"],
+        'Value': [temp_c, humidity, pressure, visibility, wind_kph, uv, cloud, pm2_5, pm10]
+    })
+
+    print("\n========= Weather Report =========")
+    print(f"Location: {location_name}, {country}\n")
+    print(df)
+    print("===================================\n")
+
+    df.to_excel("Weather_Report.xlsx", index=False)
+
+    # Subplots for better visualization
+    fig, axs = plt.subplots(2, 2, figsize=(14,10))
+
+    # Temperature + Humidity
+    sns.barplot(x=["Temperature (°C)", "Humidity (%)"], y=[temp_c, humidity], ax=axs[0,0])
+    axs[0,0].set_title("Temperature & Humidity")
+
+    # Wind & Visibility
+    sns.barplot(x=["Wind Speed (km/h)", "Visibility (km)"], y=[wind_kph, visibility], ax=axs[0,1])
+    axs[0,1].set_title("Wind & Visibility")
+
+    # Pressure + UV + Cloud
+    sns.barplot(x=["Pressure (mb)", "UV Index", "Cloud (%)"], y=[pressure, uv, cloud], ax=axs[1,0])
+    axs[1,0].set_title("Pressure, UV & Cloud")
+
+    # AQI (Air Quality)
+    sns.barplot(x=["PM2.5 AQI", "PM10 AQI"], y=[pm2_5, pm10], ax=axs[1,1])
+    axs[1,1].set_title("Air Quality Index (AQI)")
+
+    plt.tight_layout()
+    plt.show()
+
+else:
+    print("Error fetching data. Please check the city name.")
