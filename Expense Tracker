@@ -1,0 +1,102 @@
+import tkinter as tk
+from tkinter import messagebox, filedialog
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Initialize data storage
+data = []
+
+# Function to add expense
+def add_expense():
+    date = entry_date.get()
+    category = entry_category.get()
+    description = entry_desc.get()
+    amount = entry_amount.get()
+    
+    if not date or not category or not amount:
+        messagebox.showwarning("Input Error", "Please fill all required fields!")
+        return
+    
+    try:
+        amount = float(amount)
+    except:
+        messagebox.showerror("Invalid Input", "Amount must be a number!")
+        return
+    
+    data.append({"Date": date, "Category": category, "Description": description, "Amount": amount})
+    messagebox.showinfo("Success", "Expense added successfully!")
+    
+    # Clear fields
+    entry_date.delete(0, tk.END)
+    entry_category.delete(0, tk.END)
+    entry_desc.delete(0, tk.END)
+    entry_amount.delete(0, tk.END)
+    
+# Function to show all expenses
+def show_expenses():
+    if not data:
+        messagebox.showinfo("No Data", "No expenses recorded yet.")
+        return
+    
+    df = pd.DataFrame(data)
+    top = tk.Toplevel(root)
+    top.title("All Expenses")
+    
+    text = tk.Text(top, width=80, height=20)
+    text.pack()
+    text.insert(tk.END, df.to_string(index=False))
+
+# Function to export to Excel
+def export_excel():
+    if not data:
+        messagebox.showinfo("No Data", "No data to export.")
+        return
+    
+    df = pd.DataFrame(data)
+    file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
+    if file_path:
+        df.to_excel(file_path, index=False)
+        messagebox.showinfo("Exported", "Data exported successfully!")
+
+# Function to plot pie chart
+def show_pie():
+    if not data:
+        messagebox.showinfo("No Data", "No data to plot.")
+        return
+    
+    df = pd.DataFrame(data)
+    category_sum = df.groupby("Category")["Amount"].sum()
+    
+    plt.figure(figsize=(6,6))
+    plt.pie(category_sum, labels=category_sum.index, autopct='%1.1f%%', startangle=140)
+    plt.title("Expenses by Category")
+    plt.show()
+
+# Tkinter Window
+root = tk.Tk()
+root.title("Expense Tracker")
+
+# Input fields
+tk.Label(root, text="Date (DD-MM-YYYY):").grid(row=0, column=0, padx=10, pady=5, sticky="e")
+entry_date = tk.Entry(root, width=30)
+entry_date.grid(row=0, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Category:").grid(row=1, column=0, padx=10, pady=5, sticky="e")
+entry_category = tk.Entry(root, width=30)
+entry_category.grid(row=1, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Description:").grid(row=2, column=0, padx=10, pady=5, sticky="e")
+entry_desc = tk.Entry(root, width=30)
+entry_desc.grid(row=2, column=1, padx=10, pady=5)
+
+tk.Label(root, text="Amount:").grid(row=3, column=0, padx=10, pady=5, sticky="e")
+entry_amount = tk.Entry(root, width=30)
+entry_amount.grid(row=3, column=1, padx=10, pady=5)
+
+# Buttons
+tk.Button(root, text="Add Expense", command=add_expense, bg="green", fg="white", width=15).grid(row=4, column=0, padx=10, pady=10)
+tk.Button(root, text="Show Expenses", command=show_expenses, bg="blue", fg="white", width=15).grid(row=4, column=1, padx=10, pady=10)
+tk.Button(root, text="Export to Excel", command=export_excel, bg="orange", fg="black", width=15).grid(row=5, column=0, padx=10, pady=10)
+tk.Button(root, text="Pie Chart", command=show_pie, bg="purple", fg="white", width=15).grid(row=5, column=1, padx=10, pady=10)
+
+root.mainloop()
